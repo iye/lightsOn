@@ -7,7 +7,7 @@
 
 # Description: Bash script that prevents the screensaver and display power
 # management (DPMS) to be activated when you are watching Flash Videos
-# fullscreen on Firefox.
+# fullscreen on Firefox and Chromium.
 # Can detect mplayer and Vlc when they are fullscreen too but I have disabled
 # this by default.
 # lightsOn.sh needs xscreensaver to work.
@@ -15,7 +15,7 @@
 # HOW TO USE: Start the script with the number of seconds you want the checks
 # for fullscreen to be done. Example:
 # "./lightsOn.sh 120 &" will Check every 120 seconds if Mplayer,
-# Vlc or Firefox Flash are fullscreen and delay screensaver and Power Management.
+# Vlc, Firefox or Chromium are fullscreen and delay screensaver and Power Management if so.
 # You want the number of seconds to be ~10 seconds less than the time it takes
 # to xscreensaver or Power Management to activate.
 # If you don't pass an argument, the checks are done every 50 seconds.
@@ -28,7 +28,8 @@
 # PowerManagement.
 mplayer_detection=0
 vlc_detection=0
-flash_detection=1
+firefox_flash_detection=1
+chromium_flash_detection=1
 
 
 
@@ -64,23 +65,40 @@ isAppRunning()
     #Get title of active window
     activ_win_title=`xprop -id $activ_win_id | grep "WM_CLASS(STRING)"`   # I used WM_NAME(STRING) before, WM_CLASS more accurate.
 
-    # Check if user want to detect Flash Video fullscreen on Firefox, modify variable flash_detection
-    if [ $flash_detection == 1 ];then
+
+
+    # Check if user want to detect Video fullscreen on Firefox, modify variable firefox_flash_detection if you dont want Firefox detection
+    if [ $firefox_flash_detection == 1 ];then
         if [[ "$activ_win_title" = *unknown* ]];then   
         # Check if plugin-container process is running
-            flash_process=`pgrep -l plugin-containe | grep -wc plugin-containe`
+            #flash_process=`pgrep -l plugin-containe | grep -wc plugin-containe`
+            #(why was I using this commented line avobe? delete if pgrep -lc works ok)
+            flash_process=`pgrep -lc plugin-containe`
             if [[ $flash_process -ge 1 ]];then
                 return 1
             fi
         fi
     fi
+
     
+    # Check if user want to detect Video fullscreen on Chromium, modify variable chromium_flash_detection if you dont want Chromium detection
+    if [ $chromium_flash_detection == 1 ];then
+        if [[ "$activ_win_title" = *exe* ]];then   
+        # Check if Chromium Flash process is running
+            flash_process=`pgrep -lfc "chromium-browser --type=plugin --plugin-path=/usr/lib/adobe-flashplugin"`
+            if [[ $flash_process -ge 1 ]];then
+                return 1
+            fi
+        fi
+    fi
+
     
     #check if user want to detect mplayer fullscreen, modify variable mplayer_detection
     if [ $mplayer_detection == 1 ];then  
         if [[ "$activ_win_title" = *mplayer* || "$activ_win_title" = *MPlayer* ]];then
             #check if mplayer is running.
-            mplayer_process=`pgrep -l mplayer | grep -wc mplayer`
+            #mplayer_process=`pgrep -l mplayer | grep -wc mplayer`
+            mplayer_process=`pgrep -lc mplayer`
             if [ $mplayer_process -ge 1 ]; then
                 return 1
             fi
@@ -92,7 +110,8 @@ isAppRunning()
     if [ $vlc_detection == 1 ];then  
         if [[ "$activ_win_title" = *vlc* ]];then
             #check if vlc is running.
-            vlc_process=`pgrep -l vlc | grep -wc vlc`
+            #vlc_process=`pgrep -l vlc | grep -wc vlc`
+            vlc_process=`pgrep -lc vlc`
             if [ $vlc_process -ge 1 ]; then
                 return 1
             fi
