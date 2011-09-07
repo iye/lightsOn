@@ -8,30 +8,34 @@
 # Description: Bash script that prevents the screensaver and display power
 # management (DPMS) to be activated when you are watching Flash Videos
 # fullscreen on Firefox and Chromium.
-# Can detect mplayer and Vlc when they are fullscreen too but I have disabled
+# Can detect mplayer and VLC when they are fullscreen too but I have disabled
 # this by default.
-# lightsOn.sh needs xscreensaver to work.
+# lightsOn.sh needs xscreensaver or kscreensaver to work.
 
 # HOW TO USE: Start the script with the number of seconds you want the checks
 # for fullscreen to be done. Example:
 # "./lightsOn.sh 120 &" will Check every 120 seconds if Mplayer,
-# Vlc, Firefox or Chromium are fullscreen and delay screensaver and Power Management if so.
+# VLC, Firefox or Chromium are fullscreen and delay screensaver and Power Management if so.
 # You want the number of seconds to be ~10 seconds less than the time it takes
-# to xscreensaver or Power Management to activate.
+# your screensaver or Power Management to activate.
 # If you don't pass an argument, the checks are done every 50 seconds.
 
 
+# Set the variable `screensaver' to the screensaver you use.
+# Valid options are:
+# * xscreensaver (default)
+# * kscreensaver (the KDE screensaver)
+screensaver=xscreensaver
 
-
-# Modify this variables if you want this script to detect if Mplayer,
-# Vlc or Firefox Flash Video are Fullscreen and disable xscreensaver and
-# PowerManagement.
+# Modify these variables if you want this script to detect if Mplayer,
+# VLC or Firefox Flash Video are Fullscreen and disable
+# xscreensaver/kscreensaver and PowerManagement.
 mplayer_detection=0
 vlc_detection=0
 firefox_flash_detection=1
 chromium_flash_detection=1
 
-
+# YOU SHOULD NOT NEED TO MODIFY ANYTHING BELOW THIS LINE
 
 
 
@@ -71,9 +75,9 @@ isAppRunning()
     if [ $firefox_flash_detection == 1 ];then
         if [[ "$activ_win_title" = *unknown* ]];then   
         # Check if plugin-container process is running
-            #flash_process=`pgrep -l plugin-containe | grep -wc plugin-containe`
+            flash_process=`pgrep -l plugin-containe | grep -wc plugin-containe`
             #(why was I using this commented line avobe? delete if pgrep -lc works ok)
-            flash_process=`pgrep -lc plugin-containe`
+            #flash_process=`pgrep -lc plugin-containe`
             if [[ $flash_process -ge 1 ]];then
                 return 1
             fi
@@ -125,8 +129,12 @@ return 0
 
 delayScreensaver()
 {
-    # xscreensaver-command -deactivate; resets inactivity time counter so xscreensaver is not started
-    xscreensaver-command -deactivate > /dev/null
+    # reset inactivity time counter so screensaver is not started
+    if [ "$screensaver" == "kscreensaver" ]; then
+	qdbus org.freedesktop.ScreenSaver /ScreenSaver SimulateUserActivity > /dev/null
+    else
+	xscreensaver-command -deactivate > /dev/null
+    fi
 
     #Check if DPMS is on. If it is, deactivate and reactivate again. If it is not, do nothing.    
     dpmsStatus=`xset -q | grep -ce 'DPMS is Enabled'`
@@ -152,7 +160,7 @@ fi
 if [[ $1 = *[^0-9]* ]]; then
     echo "The Argument \"$1\" is not valid, not an integer"
     echo "Please use the time in seconds you want the checks to repeat."
-    echo "You want it to be ~10 seconds less than the time it takes xscreensaver or DPMS to activate"
+    echo "You want it to be ~10 seconds less than the time it takes your screensaver or DPMS to activate"
     exit 1
 fi
 
