@@ -21,12 +21,6 @@
 # If you don't pass an argument, the checks are done every 50 seconds.
 
 
-# Set the variable `screensaver' to the screensaver you use.
-# Valid options are:
-# * xscreensaver (default)
-# * kscreensaver (the KDE screensaver)
-screensaver=xscreensaver
-
 # Modify these variables if you want this script to detect if Mplayer,
 # VLC or Firefox Flash Video are Fullscreen and disable
 # xscreensaver/kscreensaver and PowerManagement.
@@ -35,8 +29,24 @@ vlc_detection=0
 firefox_flash_detection=1
 chromium_flash_detection=1
 
+
 # YOU SHOULD NOT NEED TO MODIFY ANYTHING BELOW THIS LINE
 
+
+
+# Detect screensaver been used (xscreensaver, kscreensaver or none)
+screensaver=`pgrep -l xscreensaver | grep -wc xscreensaver`
+if [ $screensaver -ge 1 ]; then
+    screensaver=xscreensaver
+else
+    screensaver=`pgrep -l kscreensaver | grep -wc kscreensaver`
+    if [ $screensaver -ge 1 ]; then
+        screensaver=kscreensaver
+    else
+        screensaver=None
+        echo "No screensaver detected" 
+    fi       
+fi
 
 
 checkFullscreen()
@@ -129,12 +139,14 @@ return 0
 
 delayScreensaver()
 {
+
     # reset inactivity time counter so screensaver is not started
-    if [ "$screensaver" == "kscreensaver" ]; then
-	qdbus org.freedesktop.ScreenSaver /ScreenSaver SimulateUserActivity > /dev/null
-    else
-	xscreensaver-command -deactivate > /dev/null
+    if [ "$screensaver" == "xscreensaver" ]; then
+    	xscreensaver-command -deactivate > /dev/null
+    elif [ "$screensaver" == "kscreensaver" ]; then
+    	qdbus org.freedesktop.ScreenSaver /ScreenSaver SimulateUserActivity > /dev/null
     fi
+
 
     #Check if DPMS is on. If it is, deactivate and reactivate again. If it is not, do nothing.    
     dpmsStatus=`xset -q | grep -ce 'DPMS is Enabled'`
@@ -172,8 +184,4 @@ do
 done
 
 
-exit 0
-
-
-
-    
+exit 0    
