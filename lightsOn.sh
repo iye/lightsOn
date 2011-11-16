@@ -83,7 +83,7 @@ isAppRunning()
 
     # Check if user want to detect Video fullscreen on Firefox, modify variable firefox_flash_detection if you dont want Firefox detection
     if [ $firefox_flash_detection == 1 ];then
-        if [[ "$activ_win_title" = *unknown* || "$activ_win_title" = *plugin-container*]];then   
+        if [[ "$activ_win_title" = *unknown* || "$activ_win_title" = *plugin-container* ]];then
         # Check if plugin-container process is running
             flash_process=`pgrep -l plugin-containe | grep -wc plugin-containe`
             #(why was I using this line avobe? delete if pgrep -lc works ok)
