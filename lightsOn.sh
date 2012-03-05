@@ -62,7 +62,8 @@ checkFullscreen()
     do
         #get id of active window and clean output
         activ_win_id=`DISPLAY=:0.${display} xprop -root _NET_ACTIVE_WINDOW`
-        activ_win_id=${activ_win_id#*# }
+        #activ_win_id=${activ_win_id#*# } #gives error if xprop returns extra ", 0x0" (happens on some distros)
+        activ_win_id=${activ_win_id:42:9}
         # Skip invalid window ids
         if [ "$activ_win_id" = "0x0" ]; then
              continue
