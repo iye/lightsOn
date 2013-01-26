@@ -1,7 +1,7 @@
 #!/bin/bash
 # lightsOn.sh
 
-# Copyright (c) 2011 iye.cba at gmail com
+# Copyright (c) 2013 iye.cba at gmail com
 # url: https://github.com/iye/lightsOn
 # This script is licensed under GNU GPL version 2.0 or above
 
