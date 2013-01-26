@@ -25,7 +25,7 @@
 # VLC or Firefox Flash Video are Fullscreen and disable
 # xscreensaver/kscreensaver and PowerManagement.
 mplayer_detection=1
-vlc_detection=0
+vlc_detection=1
 firefox_flash_detection=1
 chromium_flash_detection=1
 
