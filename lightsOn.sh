@@ -24,7 +24,7 @@
 # Modify these variables if you want this script to detect if Mplayer,
 # VLC or Firefox Flash Video are Fullscreen and disable
 # xscreensaver/kscreensaver and PowerManagement.
-mplayer_detection=0
+mplayer_detection=1
 vlc_detection=0
 firefox_flash_detection=1
 chromium_flash_detection=1
@@ -38,7 +38,8 @@ displays=""
 while read id
 do
     displays="$displays $id"
-done< <(xvinfo | sed -n 's/^screen #\([0-9]\+\)$/\1/p')
+done < <(xvinfo | sed -n 's/^screen #\([0-9]\+\)$/\1/p')
+
 
 # Detect screensaver been used (xscreensaver, kscreensaver or none)
 screensaver=`pgrep -l xscreensaver | grep -wc xscreensaver`
@@ -116,8 +117,8 @@ isAppRunning()
     # Check if user want to detect Video fullscreen on Chromium, modify variable chromium_flash_detection if you dont want Chromium detection
     if [ $chromium_flash_detection == 1 ];then
         if [[ "$activ_win_title" = *exe* ]];then   
-        # Check if Chromium Flash process is running
-            flash_process=`pgrep -lfc "chromium-browser --type=plugin --plugin-path=/usr/lib/adobe-flashplugin"`
+        # Check if Chromium/Chome Flash process is running
+            flash_process=`pgrep -lfc ".*((c|C)hrome|chromium).*flashp.*"`
             if [[ $flash_process -ge 1 ]];then
                 return 1
             fi
