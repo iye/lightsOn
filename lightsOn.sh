@@ -8,30 +8,50 @@
 # Description: Bash script that prevents the screensaver and display power
 # management (DPMS) to be activated when you are watching Flash Videos
 # fullscreen on Firefox and Chromium.
-# Can detect mplayer and VLC when they are fullscreen too but I have disabled
-# this by default.
+# Can detect mplayer, minitube, and VLC when they are fullscreen too.
+# Also, screensaver can be prevented when certain specified programs are running.
 # lightsOn.sh needs xscreensaver or kscreensaver to work.
 
-# HOW TO USE: Start the script with the number of seconds you want the checks
-# for fullscreen to be done. Example:
-# "./lightsOn.sh 120 &" will Check every 120 seconds if Mplayer,
+# HOW TO USE:
+#
+# Start the script either with no arguments or with the number of seconds
+# you want the checks for fullscreen to be done. Example:
+# "./lightsOn.sh 120 &" will Check every 120 seconds if Mplayer, Minitube,
 # VLC, Firefox or Chromium are fullscreen and delay screensaver and Power Management if so.
+#
 # You want the number of seconds to be ~10 seconds less than the time it takes
 # your screensaver or Power Management to activate.
-# If you don't pass an argument, the checks are done every 50 seconds.
+#
+# If the script is started with no arguments, ~/.xscreensaver is parsed for the "Blank After" timeout setting
+# that xscreensaver is configured with, and uses that as the time argument, but with 10 seconds subtracted.
+# Example: If the blank after timeout is 30 minutes (1800 seconds), then the timeout used will be 1790 seconds.
+# If this process fails for some reason, for instance if ~/.xscreensaver doesn't exist or the format of the file
+# changes, then the checks will be done at the default of every 50 seconds.
+#
+# An optional array variable exists here to add the names of programs that will delay the screensaver if they're running.
+# This can be useful if you want to maintain a view of the program from a distance, like a music playlist for DJing,
+# or if the screensaver eats up CPU that chops into any background processes you have running,
+# such as realtime music programs like Ardour in MIDI keyboard mode.
+# If you use this feature, make sure you use the name of the binary of the program (which may exist, for instance, in /usr/bin).
 
 
 # Modify these variables if you want this script to detect if Mplayer,
-# VLC or Firefox Flash Video are Fullscreen and disable
+# VLC, Minitube, or Firefox or Chromium Flash Video are Fullscreen and disable
 # xscreensaver/kscreensaver and PowerManagement.
 mplayer_detection=1
 vlc_detection=1
 firefox_flash_detection=1
 chromium_flash_detection=1
+minitube_detection=1
+
+# Names of programs which, when running, you wish to delay the screensaver.
+delay_progs=() # For example ('ardour2' 'gmpc')
+
 
 
 # YOU SHOULD NOT NEED TO MODIFY ANYTHING BELOW THIS LINE
 
+num_delay_progs=${#delay_progs[*]}
 
 # enumerate all the attached screens
 displays=""
@@ -39,7 +59,6 @@ while read id
 do
     displays="$displays $id"
 done < <(xvinfo | sed -n 's/^screen #\([0-9]\+\)$/\1/p')
-
 
 # Detect screensaver been used (xscreensaver, kscreensaver or none)
 screensaver=`pgrep -l xscreensaver | grep -wc xscreensaver`
@@ -51,10 +70,23 @@ else
         screensaver=kscreensaver
     else
         screensaver=None
-        echo "No screensaver detected" 
-    fi       
+        echo "No screensaver detected"
+    fi
 fi
 
+checkDelayProgs()
+{
+    if [ $num_delay_progs -gt 0 ]; then
+        for (( i=0 ; i < $num_delay_progs ; i++ ))
+        do
+            if [ `pgrep -lfc "${delay_progs[$i]}"` ]; then
+                echo "Delaying the screensaver because a program on the delay list, \"${delay_progs[$i]}\", is running..."
+                delayScreensaver
+                break
+            fi
+        done
+    fi
+}
 
 checkFullscreen()
 {
@@ -72,7 +104,7 @@ checkFullscreen()
         #if [ "$activ_win_id" = "0x0" ]; then
         #     continue
         #fi
-        
+
         # Check if Active Window (the foremost window) is in fullscreen state
         isActivWinFullscreen=`DISPLAY=:0.${display} xprop -id $activ_win_id | grep _NET_WM_STATE_FULLSCREEN`
             if [[ "$isActivWinFullscreen" = *NET_WM_STATE_FULLSCREEN* ]];then
@@ -87,14 +119,14 @@ checkFullscreen()
 
 
 
-    
+
 
 # check if active windows is mplayer, vlc or firefox
-#TODO only window name in the variable activ_win_id, not whole line. 
+#TODO only window name in the variable activ_win_id, not whole line.
 #Then change IFs to detect more specifically the apps "<vlc>" and if process name exist
 
 isAppRunning()
-{    
+{
     #Get title of active window
     activ_win_title=`xprop -id $activ_win_id | grep "WM_CLASS(STRING)"`   # I used WM_NAME(STRING) before, WM_CLASS more accurate.
 
@@ -113,11 +145,11 @@ isAppRunning()
         fi
     fi
 
-    
+
     # Check if user want to detect Video fullscreen on Chromium, modify variable chromium_flash_detection if you dont want Chromium detection
     if [ $chromium_flash_detection == 1 ];then
-        if [[ "$activ_win_title" = *exe* ]];then   
-        # Check if Chromium/Chome Flash process is running
+        if [[ "$activ_win_title" = *exe* ]];then
+        # Check if Chromium/Chrome Flash process is running
             flash_process=`pgrep -lfc ".*((c|C)hrome|chromium).*flashp.*"`
             if [[ $flash_process -ge 1 ]];then
                 return 1
@@ -125,9 +157,9 @@ isAppRunning()
         fi
     fi
 
-    
+
     #check if user want to detect mplayer fullscreen, modify variable mplayer_detection
-    if [ $mplayer_detection == 1 ];then  
+    if [ $mplayer_detection == 1 ];then
         if [[ "$activ_win_title" = *mplayer* || "$activ_win_title" = *MPlayer* ]];then
             #check if mplayer is running.
             #mplayer_process=`pgrep -l mplayer | grep -wc mplayer`
@@ -137,10 +169,10 @@ isAppRunning()
             fi
         fi
     fi
-    
-    
+
+
     # Check if user want to detect vlc fullscreen, modify variable vlc_detection
-    if [ $vlc_detection == 1 ];then  
+    if [ $vlc_detection == 1 ];then
         if [[ "$activ_win_title" = *vlc* ]];then
             #check if vlc is running.
             #vlc_process=`pgrep -l vlc | grep -wc vlc`
@@ -149,8 +181,20 @@ isAppRunning()
                 return 1
             fi
         fi
-    fi    
-    
+    fi
+
+    # Check if user want to detect minitube fullscreen, modify variable minitube_detection
+    if [ $minitube_detection == 1 ];then
+        if [[ "$activ_win_title" = *minitube* ]];then
+            #check if minitube is running.
+            #minitube_process=`pgrep -l minitube | grep -wc minitube`
+            minitube_process=`pgrep -lc minitube`
+            if [ $minitube_process -ge 1 ]; then
+                return 1
+            fi
+        fi
+    fi
+
 
 return 0
 }
@@ -161,46 +205,57 @@ delayScreensaver()
 
     # reset inactivity time counter so screensaver is not started
     if [ "$screensaver" == "xscreensaver" ]; then
-    	xscreensaver-command -deactivate > /dev/null
+      xscreensaver-command -deactivate > /dev/null
     elif [ "$screensaver" == "kscreensaver" ]; then
-    	qdbus org.freedesktop.ScreenSaver /ScreenSaver SimulateUserActivity > /dev/null
+      qdbus org.freedesktop.ScreenSaver /ScreenSaver SimulateUserActivity > /dev/null
     fi
 
 
-    #Check if DPMS is on. If it is, deactivate and reactivate again. If it is not, do nothing.    
+    #Check if DPMS is on. If it is, deactivate and reactivate again. If it is not, do nothing.
     dpmsStatus=`xset -q | grep -ce 'DPMS is Enabled'`
     if [ $dpmsStatus == 1 ];then
-        	xset -dpms
-        	xset dpms
-	fi
-	
+          xset -dpms
+          xset dpms
+  fi
+
 }
 
+checkDelay() {
+    if [ -n "$1" ]; then
+        delay=$1
 
+        # If argument is not integer, quit.
+        if [[ $1 = *[^0-9]* ]]; then
+            echo "The Argument \"$1\" is not valid, not an integer"
+            echo "Please use the time in seconds you want the checks to repeat."
+            echo "You want it to be ~10 seconds less than the time it takes your screensaver or DPMS to activate"
+            exit 1
+        fi
+    else
+        # Detect timeout value automatically and use it minus 10 seconds to get the perfect val every time
+        delay=`grep timeout ~/.xscreensaver | tail -1 | cut -d ':' -f 3`
 
-delay=$1
-
-
-# If argument empty, use 50 seconds as default.
-if [ -z "$1" ];then
-    delay=50
-fi
-
-
-# If argument is not integer quit.
-if [[ $1 = *[^0-9]* ]]; then
-    echo "The Argument \"$1\" is not valid, not an integer"
-    echo "Please use the time in seconds you want the checks to repeat."
-    echo "You want it to be ~10 seconds less than the time it takes your screensaver or DPMS to activate"
-    exit 1
-fi
-
+        # make sure delay is an integer and one minute or more
+        if [[ $delay != *[^0-9]* && $delay -gt 0 ]]; then
+            delay=$(( 10#$delay )) # number has a leading zero and interpreted as octal - this forces base 10
+            #delay=${delay#0} # Also, as a hack, parameter expansion can be used to evaluate the number
+            echo "Delay is ${delay} minutes, minus 10 seconds."
+            delay=$(( $delay * 60 - 10))
+        # use 50 seconds as default.
+        else
+            echo "~/.xscreensaver does not exist or value interpreted was rejected. Using default delay of 50."
+            delay=50
+        fi
+    fi
+}
 
 while true
 do
+    checkDelayProgs
     checkFullscreen
+    checkDelay "$@" # passes all arguments to the function. you should (almost) always put $@ in double-quotes to avoid misparsing of arguments with spaces in them
     sleep $delay
 done
 
 
-exit 0    
+exit 0
