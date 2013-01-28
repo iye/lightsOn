@@ -79,7 +79,7 @@ checkDelayProgs()
     if [ $num_delay_progs -gt 0 ]; then
         for (( i=0 ; i < $num_delay_progs ; i++ ))
         do
-            if [ `pgrep -lfc "${delay_progs[$i]}"` ]; then
+            if [ `pgrep -lfc "${delay_progs[$i]}"` -ge 1 ]; then
                 echo "Delaying the screensaver because a program on the delay list, \"${delay_progs[$i]}\", is running..."
                 delayScreensaver
                 break
