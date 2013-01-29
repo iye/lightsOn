@@ -12,21 +12,14 @@
 # Also, screensaver can be prevented when certain specified programs are running.
 # lightsOn.sh needs xscreensaver or kscreensaver to work.
 
-# HOW TO USE:
-#
-# Start the script either with no arguments or with the number of seconds
-# you want the checks for fullscreen to be done. Example:
-# "./lightsOn.sh 120 &" will Check every 120 seconds if Mplayer, Minitube,
+
+# HOW TO USE: Start the script with the number of seconds you want the checks
+# for fullscreen to be done. Example:
+# "./lightsOn.sh 120 &" will Check every 120 seconds if Mplayer, Minitube
 # VLC, Firefox or Chromium are fullscreen and delay screensaver and Power Management if so.
-#
 # You want the number of seconds to be ~10 seconds less than the time it takes
 # your screensaver or Power Management to activate.
-#
-# If the script is started with no arguments, ~/.xscreensaver is parsed for the "Blank After" timeout setting
-# that xscreensaver is configured with, and uses that as the time argument, but with 10 seconds subtracted.
-# Example: If the blank after timeout is 30 minutes (1800 seconds), then the timeout used will be 1790 seconds.
-# If this process fails for some reason, for instance if ~/.xscreensaver doesn't exist or the format of the file
-# changes, then the checks will be done at the default of every 50 seconds.
+# If you don't pass an argument, the checks are done every 50 seconds.
 #
 # An optional array variable exists here to add the names of programs that will delay the screensaver if they're running.
 # This can be useful if you want to maintain a view of the program from a distance, like a music playlist for DJing,
@@ -50,12 +43,14 @@ delay_progs=() # For example ('ardour2' 'gmpc')
 
 # YOU SHOULD NOT NEED TO MODIFY ANYTHING BELOW THIS LINE
 
+
 # enumerate all the attached screens
 displays=""
 while read id
 do
     displays="$displays $id"
 done < <(xvinfo | sed -n 's/^screen #\([0-9]\+\)$/\1/p')
+
 
 # Detect screensaver been used (xscreensaver, kscreensaver or none)
 screensaver=`pgrep -l xscreensaver | grep -wc xscreensaver`
@@ -74,8 +69,8 @@ fi
 checkDelayProgs()
 {
     for prog in "${delay_progs[@]}"; do
-        if [ `pgrep -lfc "${prog}"` -ge 1 ]; then
-            echo "Delaying the screensaver because a program on the delay list, \"${prog}\", is running..."
+        if [ `pgrep -lfc "$prog"` -ge 1 ]; then
+            echo "Delaying the screensaver because a program on the delay list, \"$prog\", is running..."
             delayScreensaver
             break
         fi
@@ -143,7 +138,7 @@ isAppRunning()
     # Check if user want to detect Video fullscreen on Chromium, modify variable chromium_flash_detection if you dont want Chromium detection
     if [ $chromium_flash_detection == 1 ];then
         if [[ "$activ_win_title" = *exe* ]];then
-        # Check if Chromium/Chrome Flash process is running
+        # Check if Chromium/Chome Flash process is running
             flash_process=`pgrep -lfc ".*((c|C)hrome|chromium).*flashp.*"`
             if [[ $flash_process -ge 1 ]];then
                 return 1
@@ -189,7 +184,6 @@ isAppRunning()
         fi
     fi
 
-
 return 0
 }
 
@@ -199,55 +193,45 @@ delayScreensaver()
 
     # reset inactivity time counter so screensaver is not started
     if [ "$screensaver" == "xscreensaver" ]; then
-      xscreensaver-command -deactivate > /dev/null
+        xscreensaver-command -deactivate > /dev/null
     elif [ "$screensaver" == "kscreensaver" ]; then
-      qdbus org.freedesktop.ScreenSaver /ScreenSaver SimulateUserActivity > /dev/null
+        qdbus org.freedesktop.ScreenSaver /ScreenSaver SimulateUserActivity > /dev/null
     fi
 
 
     #Check if DPMS is on. If it is, deactivate and reactivate again. If it is not, do nothing.
     dpmsStatus=`xset -q | grep -ce 'DPMS is Enabled'`
     if [ $dpmsStatus == 1 ];then
-          xset -dpms
-          xset dpms
-  fi
-
-}
-
-checkDelay() {
-    if [ -n "$1" ]; then
-        delay=$1
-
-        # If argument is not integer, quit.
-        if [[ $1 = *[^0-9]* ]]; then
-            echo "The Argument \"$1\" is not valid, not an integer"
-            echo "Please use the time in seconds you want the checks to repeat."
-            echo "You want it to be ~10 seconds less than the time it takes your screensaver or DPMS to activate"
-            exit 1
-        fi
-    else
-        # Detect timeout value automatically and use it minus 10 seconds to get the perfect val every time
-        delay=`grep timeout ~/.xscreensaver | tail -1 | cut -d ':' -f 3`
-
-        # make sure delay is an integer and one minute or more
-        if [[ $delay != *[^0-9]* && $delay -gt 0 ]]; then
-            delay=$(( 10#$delay )) # number has a leading zero and interpreted as octal - this forces base 10
-            #delay=${delay#0} # Also, as a hack, parameter expansion can be used to evaluate the number
-            echo "Delay is ${delay} minutes, minus 10 seconds."
-            delay=$(( $delay * 60 - 10))
-        # use 50 seconds as default.
-        else
-            echo "~/.xscreensaver does not exist or value interpreted was rejected. Using default delay of 50."
-            delay=50
-        fi
+            xset -dpms
+            xset dpms
     fi
+
 }
+
+
+
+delay=$1
+
+
+# If argument empty, use 50 seconds as default.
+if [ -z "$1" ];then
+    delay=50
+fi
+
+
+# If argument is not integer quit.
+if [[ $1 = *[^0-9]* ]]; then
+    echo "The Argument \"$1\" is not valid, not an integer"
+    echo "Please use the time in seconds you want the checks to repeat."
+    echo "You want it to be ~10 seconds less than the time it takes your screensaver or DPMS to activate"
+    exit 1
+fi
+
 
 while true
 do
     checkDelayProgs
     checkFullscreen
-    checkDelay "$@" # passes all arguments to the function. you should (almost) always put $@ in double-quotes to avoid misparsing of arguments with spaces in them
     sleep $delay
 done
 
