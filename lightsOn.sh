@@ -48,10 +48,7 @@ minitube_detection=1
 delay_progs=() # For example ('ardour2' 'gmpc')
 
 
-
 # YOU SHOULD NOT NEED TO MODIFY ANYTHING BELOW THIS LINE
-
-num_delay_progs=${#delay_progs[*]}
 
 # enumerate all the attached screens
 displays=""
@@ -76,16 +73,13 @@ fi
 
 checkDelayProgs()
 {
-    if [ $num_delay_progs -gt 0 ]; then
-        for (( i=0 ; i < $num_delay_progs ; i++ ))
-        do
-            if [ `pgrep -lfc "${delay_progs[$i]}"` -ge 1 ]; then
-                echo "Delaying the screensaver because a program on the delay list, \"${delay_progs[$i]}\", is running..."
-                delayScreensaver
-                break
-            fi
-        done
-    fi
+    for prog in "${delay_progs[@]}"; do
+        if [ `pgrep -lfc "${prog}"` -ge 1 ]; then
+            echo "Delaying the screensaver because a program on the delay list, \"${prog}\", is running..."
+            delayScreensaver
+            break
+        fi
+    done
 }
 
 checkFullscreen()
